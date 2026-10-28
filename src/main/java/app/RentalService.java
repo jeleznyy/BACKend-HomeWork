@@ -37,7 +37,10 @@ public class RentalService {
     }
 
     public void deleteBike(long id) {
-        getBike(id);
+        Bike bike = getBike(id);
+        if (!bike.isAvailable()) {
+            throw new IllegalStateException("Нельзя удалить велосипед, пока он в прокате");
+        }
         bikes.remove(id);
     }
 
@@ -63,13 +66,55 @@ public class RentalService {
     public Customer updateCustomer(long id, String name, String type) {
         getCustomer(id);
         Customer customer = makeCustomer(id, name, type);
+        if (countRentedBikes(id) > customer.getBikeLimit()) {
+            throw new IllegalStateException("Сначала верните лишние велосипеды, затем меняйте тариф");
+        }
         customers.put(id, customer);
         return customer;
     }
 
     public void deleteCustomer(long id) {
         getCustomer(id);
+        if (countRentedBikes(id) > 0) {
+            throw new IllegalStateException("Нельзя удалить клиента, пока он не вернул велосипеды");
+        }
         customers.remove(id);
+    }
+
+    public Bike rentBike(long customerId, long bikeId) {
+        Customer customer = getCustomer(customerId);
+        Bike bike = getBike(bikeId);
+        if (!bike.isAvailable()) {
+            throw new IllegalStateException("Велосипед уже выдан");
+        }
+        if (countRentedBikes(customerId) >= customer.getBikeLimit()) {
+            throw new IllegalStateException("Достигнут лимит велосипедов для этого тарифа");
+        }
+        bike.rentTo(customerId);
+        return bike;
+    }
+
+    public Bike returnBike(long customerId, long bikeId) {
+        getCustomer(customerId);
+        Bike bike = getBike(bikeId);
+        if (bike.isAvailable()) {
+            throw new IllegalStateException("Этот велосипед уже находится в пункте проката");
+        }
+        if (bike.getCustomerId() != customerId) {
+            throw new IllegalStateException("Велосипед выдан другому клиенту");
+        }
+        bike.returnToShop();
+        return bike;
+    }
+
+    private int countRentedBikes(long customerId) {
+        int count = 0;
+        for (Bike bike : bikes.values()) {
+            if (bike.getCustomerId() != null && bike.getCustomerId() == customerId) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private Customer makeCustomer(long id, String name, String type) {
