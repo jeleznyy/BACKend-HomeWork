@@ -15,6 +15,7 @@ public class Main {
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
         server.createContext("/ping", new PingHandler());
         server.createContext("/bikes", new ApiHandler(service));
+        server.createContext("/customers", new ApiHandler(service));
         server.start();
         System.out.println("Сервер запущен: http://localhost:8080/ping");
     }

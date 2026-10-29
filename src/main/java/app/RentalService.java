@@ -77,6 +77,23 @@ public class RentalService {
         return new ArrayList<>(customers.values());
     }
 
+    public List<Customer> getCustomers(String name, String type) {
+        if (type != null && !type.equals("regular") && !type.equals("premium")) {
+            throw new IllegalArgumentException("type должен быть regular или premium");
+        }
+        List<Customer> result = new ArrayList<>();
+        for (Customer customer : customers.values()) {
+            if (name != null && !customer.getName().contains(name)) {
+                continue;
+            }
+            if (type != null && !customer.getType().equals(type)) {
+                continue;
+            }
+            result.add(customer);
+        }
+        return result;
+    }
+
     public Customer updateCustomer(long id, String name, String type) {
         getCustomer(id);
         Customer customer = makeCustomer(id, name, type);

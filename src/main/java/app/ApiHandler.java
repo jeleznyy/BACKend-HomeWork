@@ -54,6 +54,10 @@ public class ApiHandler implements HttpHandler {
 
     private void route(HttpExchange exchange) throws IOException {
         String[] path = exchange.getRequestURI().getPath().split("/", -1);
+        if (path.length >= 2 && path[1].equals("customers")) {
+            customers(exchange, path);
+            return;
+        }
         if (path.length == 2 && path[1].equals("bikes")) {
             collection(exchange);
         } else if (path.length == 3 && path[1].equals("bikes") && !path[2].isEmpty()) {
@@ -100,6 +104,58 @@ public class ApiHandler implements HttpHandler {
             send(exchange, 204, null);
         } else {
             methodNotAllowed(exchange, "GET, PUT, DELETE");
+        }
+    }
+
+    private void customers(HttpExchange exchange, String[] path) throws IOException {
+        String method = exchange.getRequestMethod();
+        if (path.length == 2) {
+            if (method.equals("GET")) {
+                Map<String, String> params = query(exchange, List.of("name", "type"));
+                send(exchange, 200, service.getCustomers(params.get("name"), params.get("type")));
+            } else if (method.equals("POST")) {
+                query(exchange, List.of());
+                JsonNode request = read(exchange, List.of("name", "type"));
+                Customer customer = service.createCustomer(textField(request, "name"), textField(request, "type"));
+                exchange.getResponseHeaders().set("Location", "/customers/" + customer.getId());
+                send(exchange, 201, customer);
+            } else {
+                methodNotAllowed(exchange, "GET, POST");
+            }
+        } else if (path.length == 3 && !path[2].isEmpty()) {
+            long id = positiveId(path[2]);
+            query(exchange, List.of());
+            if (method.equals("GET")) {
+                send(exchange, 200, service.getCustomer(id));
+            } else if (method.equals("PUT")) {
+                JsonNode request = read(exchange, List.of("name", "type"));
+                send(exchange, 200, service.updateCustomer(id, textField(request, "name"), textField(request, "type")));
+            } else if (method.equals("DELETE")) {
+                service.deleteCustomer(id);
+                send(exchange, 204, null);
+            } else {
+                methodNotAllowed(exchange, "GET, PUT, DELETE");
+            }
+        } else if (path.length == 4 && (path[3].equals("rentals") || path[3].equals("returns"))) {
+            if (!method.equals("POST")) {
+                methodNotAllowed(exchange, "POST");
+            }
+            long customerId = positiveId(path[2]);
+            query(exchange, List.of());
+            JsonNode request = read(exchange, List.of("bikeId"));
+            JsonNode value = request.get("bikeId");
+            if (!value.isIntegralNumber() || !value.canConvertToLong() || value.longValue() <= 0) {
+                throw new IllegalArgumentException("bikeId должен быть положительным целым числом");
+            }
+            Bike bike;
+            if (path[3].equals("rentals")) {
+                bike = service.rentBike(customerId, value.longValue());
+            } else {
+                bike = service.returnBike(customerId, value.longValue());
+            }
+            send(exchange, 200, bike);
+        } else {
+            throw new HttpException(404, "Маршрут не найден");
         }
     }
 
