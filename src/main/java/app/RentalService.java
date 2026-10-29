@@ -27,7 +27,21 @@ public class RentalService {
     }
 
     public List<Bike> getBikes() {
-        return new ArrayList<>(bikes.values());
+        return getBikes(null, null);
+    }
+
+    public List<Bike> getBikes(String model, Boolean available) {
+        List<Bike> result = new ArrayList<>();
+        for (Bike bike : bikes.values()) {
+            if (model != null && !bike.getModel().contains(model)) {
+                continue;
+            }
+            if (available != null && bike.isAvailable() != available) {
+                continue;
+            }
+            result.add(bike);
+        }
+        return result;
     }
 
     public Bike updateBike(long id, String model) {
