@@ -3,6 +3,8 @@ package app;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -63,6 +65,23 @@ public class CustomerController {
         service.deleteCustomer(RequestParameters.positiveId(id));
     }
 
+    @PostMapping(path = "/{id}/rentals", consumes = APPLICATION_JSON_VALUE)
+    public Bike rent(@PathVariable String id, @Valid @RequestBody RentalRequest request,
+                     HttpServletRequest http) {
+        RequestParameters.query(http);
+        return service.rentBike(RequestParameters.positiveId(id), request.bikeId());
+    }
+
+    @PostMapping(path = "/{id}/returns", consumes = APPLICATION_JSON_VALUE)
+    public Bike returnBike(@PathVariable String id, @Valid @RequestBody RentalRequest request,
+                           HttpServletRequest http) {
+        RequestParameters.query(http);
+        return service.returnBike(RequestParameters.positiveId(id), request.bikeId());
+    }
+
     public record CustomerRequest(@NotBlank String name, @NotBlank String type) {
+    }
+
+    public record RentalRequest(@NotNull @Positive Long bikeId) {
     }
 }
