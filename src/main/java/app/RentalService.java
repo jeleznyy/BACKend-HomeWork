@@ -160,9 +160,10 @@ public class RentalService {
     }
 
     private String checkText(String text, String field) {
-        if (text == null || text.isBlank() || text.length() > 100) {
+        String normalized = text == null ? "" : text.trim();
+        if (normalized.isBlank() || normalized.length() > 100) {
             throw new IllegalArgumentException(field + ": нужна непустая строка до 100 символов");
         }
-        return text.trim();
+        return normalized;
     }
 }
