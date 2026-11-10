@@ -2,12 +2,17 @@ package app;
 
 public class Bike {
     private final long id;
-    private String model;
-    private Long customerId;
+    private final String model;
+    private final Long customerId;
 
     public Bike(long id, String model) {
+        this(id, model, null);
+    }
+
+    private Bike(long id, String model, Long customerId) {
         this.id = id;
         this.model = model;
+        this.customerId = customerId;
     }
 
     public long getId() {
@@ -26,15 +31,15 @@ public class Bike {
         return customerId == null;
     }
 
-    void rename(String model) {
-        this.model = model;
+    Bike withModel(String model) {
+        return new Bike(id, model, customerId);
     }
 
-    void rentTo(long customerId) {
-        this.customerId = customerId;
+    Bike rentTo(long customerId) {
+        return new Bike(id, model, customerId);
     }
 
-    void returnToShop() {
-        customerId = null;
+    Bike returnToShop() {
+        return new Bike(id, model, null);
     }
 }

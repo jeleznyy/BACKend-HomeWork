@@ -11,7 +11,7 @@ public class Main {
         System.setProperty("sun.net.httpserver.maxRspTime", "5");
         System.setProperty("jdk.httpserver.maxConnections", "32");
 
-        RentalService service = new RentalService();
+        RentalService service = new RentalService(new RentalRepository());
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
         server.createContext("/ping", new PingHandler());
         server.createContext("/bikes", new BikeHandler(service));
