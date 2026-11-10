@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 
-@RestControllerAdvice(assignableTypes = BikeController.class)
+@RestControllerAdvice(assignableTypes = {BikeController.class, CustomerController.class})
 class RequestBodyLimit extends RequestBodyAdviceAdapter {
     private static final int MAX_BODY_SIZE = 16 * 1024;
 
