@@ -7,10 +7,13 @@
 HTTP-сервис проката велосипедов. Java 21, Maven, Spring Boot.
 
 Выполненные задания:
-- Подключён Spring Boot и добавлен маршрут `GET /ping`.
+- API велосипедов перенесён на Spring Boot.
+- Добавлены юнит-тесты сервиса без запуска Spring.
 
 Запуск из папки проекта: `mvn spring-boot:run`
 
-Проверка в Git Bash: `curl -i http://localhost:8080/ping`
+Проверка в Git Bash: `curl -i http://localhost:8080/bikes`
 
 API первой лабораторной пока запускается через `mvn compile exec:java`. Для него используется `bash requests.sh`. Оба запуска используют порт 8080.
+
+Запуск тестов: `mvn test`
