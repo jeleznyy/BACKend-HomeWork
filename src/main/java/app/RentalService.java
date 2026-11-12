@@ -1,25 +1,24 @@
 package app;
 
+import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+@Service
 public class RentalService {
-    private final Map<Long, Bike> bikes = new HashMap<>();
-    private final Map<Long, Customer> customers = new HashMap<>();
-    private long nextBikeId = 1;
-    private long nextCustomerId = 1;
+    private final RentalRepository repository;
 
-    public Bike createBike(String model) {
-        Bike bike = new Bike(nextBikeId, checkText(model, "model"));
-        bikes.put(nextBikeId, bike);
-        nextBikeId++;
-        return bike;
+    RentalService(RentalRepository repository) {
+        this.repository = repository;
     }
 
-    public Bike getBike(long id) {
-        Bike bike = bikes.get(id);
+    public synchronized Bike createBike(String model) {
+        return repository.createBike(checkText(model, "model"));
+    }
+
+    public synchronized Bike getBike(long id) {
+        Bike bike = repository.findBike(id);
         if (bike == null) {
             throw new NotFoundException("Велосипед не найден");
         }
@@ -30,9 +29,9 @@ public class RentalService {
         return getBikes(null, null);
     }
 
-    public List<Bike> getBikes(String model, Boolean available) {
+    public synchronized List<Bike> getBikes(String model, Boolean available) {
         List<Bike> result = new ArrayList<>();
-        for (Bike bike : bikes.values()) {
+        for (Bike bike : repository.findAllBikes()) {
             if (model != null && !bike.getModel().contains(model)) {
                 continue;
             }
@@ -44,45 +43,45 @@ public class RentalService {
         return result;
     }
 
-    public Bike updateBike(long id, String model) {
+    public synchronized Bike updateBike(long id, String model) {
         Bike bike = getBike(id);
-        bike.rename(checkText(model, "model"));
-        return bike;
+        Bike updated = bike.withModel(checkText(model, "model"));
+        repository.saveBike(updated);
+        return updated;
     }
 
-    public void deleteBike(long id) {
+    public synchronized void deleteBike(long id) {
         Bike bike = getBike(id);
         if (!bike.isAvailable()) {
             throw new IllegalStateException("Нельзя удалить велосипед, пока он в прокате");
         }
-        bikes.remove(id);
+        repository.deleteBike(id);
     }
 
-    public Customer createCustomer(String name, String type) {
-        Customer customer = makeCustomer(nextCustomerId, name, type);
-        customers.put(nextCustomerId, customer);
-        nextCustomerId++;
+    public synchronized Customer createCustomer(String name, String type) {
+        Customer customer = makeCustomer(repository.nextCustomerId(), name, type);
+        repository.addCustomer(customer);
         return customer;
     }
 
-    public Customer getCustomer(long id) {
-        Customer customer = customers.get(id);
+    public synchronized Customer getCustomer(long id) {
+        Customer customer = repository.findCustomer(id);
         if (customer == null) {
             throw new NotFoundException("Клиент не найден");
         }
         return customer;
     }
 
-    public List<Customer> getCustomers() {
-        return new ArrayList<>(customers.values());
+    public synchronized List<Customer> getCustomers() {
+        return repository.findAllCustomers();
     }
 
-    public List<Customer> getCustomers(String name, String type) {
+    public synchronized List<Customer> getCustomers(String name, String type) {
         if (type != null && !type.equals("regular") && !type.equals("premium")) {
             throw new IllegalArgumentException("type должен быть regular или premium");
         }
         List<Customer> result = new ArrayList<>();
-        for (Customer customer : customers.values()) {
+        for (Customer customer : repository.findAllCustomers()) {
             if (name != null && !customer.getName().contains(name)) {
                 continue;
             }
@@ -94,25 +93,25 @@ public class RentalService {
         return result;
     }
 
-    public Customer updateCustomer(long id, String name, String type) {
+    public synchronized Customer updateCustomer(long id, String name, String type) {
         getCustomer(id);
         Customer customer = makeCustomer(id, name, type);
         if (countRentedBikes(id) > customer.getBikeLimit()) {
             throw new IllegalStateException("Сначала верните лишние велосипеды, затем меняйте тариф");
         }
-        customers.put(id, customer);
+        repository.saveCustomer(customer);
         return customer;
     }
 
-    public void deleteCustomer(long id) {
+    public synchronized void deleteCustomer(long id) {
         getCustomer(id);
         if (countRentedBikes(id) > 0) {
             throw new IllegalStateException("Нельзя удалить клиента, пока он не вернул велосипеды");
         }
-        customers.remove(id);
+        repository.deleteCustomer(id);
     }
 
-    public Bike rentBike(long customerId, long bikeId) {
+    public synchronized Bike rentBike(long customerId, long bikeId) {
         Customer customer = getCustomer(customerId);
         Bike bike = getBike(bikeId);
         if (!bike.isAvailable()) {
@@ -121,11 +120,12 @@ public class RentalService {
         if (countRentedBikes(customerId) >= customer.getBikeLimit()) {
             throw new IllegalStateException("Достигнут лимит велосипедов для этого тарифа");
         }
-        bike.rentTo(customerId);
-        return bike;
+        Bike rented = bike.rentTo(customerId);
+        repository.saveBike(rented);
+        return rented;
     }
 
-    public Bike returnBike(long customerId, long bikeId) {
+    public synchronized Bike returnBike(long customerId, long bikeId) {
         getCustomer(customerId);
         Bike bike = getBike(bikeId);
         if (bike.isAvailable()) {
@@ -134,13 +134,14 @@ public class RentalService {
         if (bike.getCustomerId() != customerId) {
             throw new IllegalStateException("Велосипед выдан другому клиенту");
         }
-        bike.returnToShop();
-        return bike;
+        Bike returned = bike.returnToShop();
+        repository.saveBike(returned);
+        return returned;
     }
 
     private int countRentedBikes(long customerId) {
         int count = 0;
-        for (Bike bike : bikes.values()) {
+        for (Bike bike : repository.findAllBikes()) {
             if (bike.getCustomerId() != null && bike.getCustomerId() == customerId) {
                 count++;
             }
