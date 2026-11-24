@@ -14,7 +14,7 @@ class CustomerServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RentalService(new RentalRepository());
+        service = new RentalService(new InMemoryRentalRepository());
     }
 
     @Test

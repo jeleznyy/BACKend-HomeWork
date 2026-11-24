@@ -1,11 +1,13 @@
 package app;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Transactional(readOnly = true)
 public class RentalService {
     private final RentalRepository repository;
 
@@ -13,23 +15,20 @@ public class RentalService {
         this.repository = repository;
     }
 
-    public synchronized Bike createBike(String model) {
+    @Transactional
+    public Bike createBike(String model) {
         return repository.createBike(checkText(model, "model"));
     }
 
-    public synchronized Bike getBike(long id) {
-        Bike bike = repository.findBike(id);
-        if (bike == null) {
-            throw new NotFoundException("Велосипед не найден");
-        }
-        return bike;
+    public Bike getBike(long id) {
+        return requireBike(repository.findBike(id));
     }
 
     public List<Bike> getBikes() {
         return getBikes(null, null);
     }
 
-    public synchronized List<Bike> getBikes(String model, Boolean available) {
+    public List<Bike> getBikes(String model, Boolean available) {
         List<Bike> result = new ArrayList<>();
         for (Bike bike : repository.findAllBikes()) {
             if (model != null && !bike.getModel().contains(model)) {
@@ -43,42 +42,39 @@ public class RentalService {
         return result;
     }
 
-    public synchronized Bike updateBike(long id, String model) {
-        Bike bike = getBike(id);
+    @Transactional
+    public Bike updateBike(long id, String model) {
+        Bike bike = requireBike(repository.findBikeForUpdate(id));
         Bike updated = bike.withModel(checkText(model, "model"));
         repository.saveBike(updated);
         return updated;
     }
 
-    public synchronized void deleteBike(long id) {
-        Bike bike = getBike(id);
+    @Transactional
+    public void deleteBike(long id) {
+        Bike bike = requireBike(repository.findBikeForUpdate(id));
         if (!bike.isAvailable()) {
             throw new IllegalStateException("Нельзя удалить велосипед, пока он в прокате");
         }
         repository.deleteBike(id);
     }
 
-    public synchronized Customer createCustomer(String name, String type) {
-        Customer customer = makeCustomer(repository.nextCustomerId(), name, type);
-        repository.addCustomer(customer);
-        return customer;
+    @Transactional
+    public Customer createCustomer(String name, String type) {
+        return repository.createCustomer(checkText(name, "name"), checkType(type));
     }
 
-    public synchronized Customer getCustomer(long id) {
-        Customer customer = repository.findCustomer(id);
-        if (customer == null) {
-            throw new NotFoundException("Клиент не найден");
-        }
-        return customer;
+    public Customer getCustomer(long id) {
+        return requireCustomer(repository.findCustomer(id));
     }
 
-    public synchronized List<Customer> getCustomers() {
-        return repository.findAllCustomers();
+    public List<Customer> getCustomers() {
+        return getCustomers(null, null);
     }
 
-    public synchronized List<Customer> getCustomers(String name, String type) {
-        if (type != null && !type.equals("regular") && !type.equals("premium")) {
-            throw new IllegalArgumentException("type должен быть regular или premium");
+    public List<Customer> getCustomers(String name, String type) {
+        if (type != null) {
+            checkType(type);
         }
         List<Customer> result = new ArrayList<>();
         for (Customer customer : repository.findAllCustomers()) {
@@ -93,31 +89,34 @@ public class RentalService {
         return result;
     }
 
-    public synchronized Customer updateCustomer(long id, String name, String type) {
-        getCustomer(id);
-        Customer customer = makeCustomer(id, name, type);
-        if (countRentedBikes(id) > customer.getBikeLimit()) {
+    @Transactional
+    public Customer updateCustomer(long id, String name, String type) {
+        requireCustomer(repository.findCustomerForUpdate(id));
+        Customer customer = Customer.of(id, checkText(name, "name"), checkType(type));
+        if (repository.countRentedBikes(id) > customer.getBikeLimit()) {
             throw new IllegalStateException("Сначала верните лишние велосипеды, затем меняйте тариф");
         }
         repository.saveCustomer(customer);
         return customer;
     }
 
-    public synchronized void deleteCustomer(long id) {
-        getCustomer(id);
-        if (countRentedBikes(id) > 0) {
+    @Transactional
+    public void deleteCustomer(long id) {
+        requireCustomer(repository.findCustomerForUpdate(id));
+        if (repository.countRentedBikes(id) > 0) {
             throw new IllegalStateException("Нельзя удалить клиента, пока он не вернул велосипеды");
         }
         repository.deleteCustomer(id);
     }
 
-    public synchronized Bike rentBike(long customerId, long bikeId) {
-        Customer customer = getCustomer(customerId);
-        Bike bike = getBike(bikeId);
+    @Transactional
+    public Bike rentBike(long customerId, long bikeId) {
+        Customer customer = requireCustomer(repository.findCustomerForUpdate(customerId));
+        Bike bike = requireBike(repository.findBikeForUpdate(bikeId));
         if (!bike.isAvailable()) {
             throw new IllegalStateException("Велосипед уже выдан");
         }
-        if (countRentedBikes(customerId) >= customer.getBikeLimit()) {
+        if (repository.countRentedBikes(customerId) >= customer.getBikeLimit()) {
             throw new IllegalStateException("Достигнут лимит велосипедов для этого тарифа");
         }
         Bike rented = bike.rentTo(customerId);
@@ -125,9 +124,10 @@ public class RentalService {
         return rented;
     }
 
-    public synchronized Bike returnBike(long customerId, long bikeId) {
-        getCustomer(customerId);
-        Bike bike = getBike(bikeId);
+    @Transactional
+    public Bike returnBike(long customerId, long bikeId) {
+        requireCustomer(repository.findCustomerForUpdate(customerId));
+        Bike bike = requireBike(repository.findBikeForUpdate(bikeId));
         if (bike.isAvailable()) {
             throw new IllegalStateException("Этот велосипед уже находится в пункте проката");
         }
@@ -139,25 +139,25 @@ public class RentalService {
         return returned;
     }
 
-    private int countRentedBikes(long customerId) {
-        int count = 0;
-        for (Bike bike : repository.findAllBikes()) {
-            if (bike.getCustomerId() != null && bike.getCustomerId() == customerId) {
-                count++;
-            }
+    private Bike requireBike(Bike bike) {
+        if (bike == null) {
+            throw new NotFoundException("Велосипед не найден");
         }
-        return count;
+        return bike;
     }
 
-    private Customer makeCustomer(long id, String name, String type) {
-        name = checkText(name, "name");
-        if ("regular".equals(type)) {
-            return new RegularCustomer(id, name);
+    private Customer requireCustomer(Customer customer) {
+        if (customer == null) {
+            throw new NotFoundException("Клиент не найден");
         }
-        if ("premium".equals(type)) {
-            return new PremiumCustomer(id, name);
+        return customer;
+    }
+
+    private String checkType(String type) {
+        if (!"regular".equals(type) && !"premium".equals(type)) {
+            throw new IllegalArgumentException("type должен быть regular или premium");
         }
-        throw new IllegalArgumentException("type должен быть regular или premium");
+        return type;
     }
 
     private String checkText(String text, String field) {

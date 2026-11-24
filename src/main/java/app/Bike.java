@@ -9,7 +9,7 @@ public class Bike {
         this(id, model, null);
     }
 
-    private Bike(long id, String model, Long customerId) {
+    Bike(long id, String model, Long customerId) {
         this.id = id;
         this.model = model;
         this.customerId = customerId;
