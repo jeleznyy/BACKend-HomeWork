@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: bike_rental
+      POSTGRES_USER: rental
+      POSTGRES_PASSWORD: rental
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - rental-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "rental", "-d", "bike_rental"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  rental-data:
