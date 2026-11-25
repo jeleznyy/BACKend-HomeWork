@@ -1,9 +1,9 @@
 package app;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,48 +32,39 @@ public class BikeController {
     }
 
     @GetMapping
-    public List<Bike> list(HttpServletRequest http) {
-        var params = RequestParameters.query(http, "model", "available");
-        String available = params.get("available");
-        if (available != null && !available.equals("true") && !available.equals("false")) {
-            throw new IllegalArgumentException("available должен быть true или false");
-        }
-        return service.getBikes(params.get("model"), available == null ? null : Boolean.valueOf(available));
+    public List<Bike> list(
+            @RequestParam(name = "model", required = false) String model,
+            @RequestParam(name = "available", required = false) @Pattern(regexp = "true|false") String available) {
+        return service.getBikes(model, available == null ? null : Boolean.valueOf(available));
     }
 
     @GetMapping("/with-customers")
     public List<BikeWithCustomer> listWithCustomers(
-            @RequestParam(required = false) String model,
-            @RequestParam(required = false) @Pattern(regexp = "true|false") String available) {
+            @RequestParam(name = "model", required = false) String model,
+            @RequestParam(name = "available", required = false) @Pattern(regexp = "true|false") String available) {
         return service.getBikesWithCustomers(model, available == null ? null : Boolean.valueOf(available));
     }
 
     @GetMapping("/{id}")
-    public Bike get(@PathVariable String id, HttpServletRequest http) {
-        RequestParameters.query(http);
-        return service.getBike(RequestParameters.positiveId(id));
+    public Bike get(@PathVariable @Positive long id) {
+        return service.getBike(id);
     }
 
     @PostMapping(consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity<Bike> create(@Valid @RequestBody BikeRequest request,
-                                       HttpServletRequest http) {
-        RequestParameters.query(http);
+    public ResponseEntity<Bike> create(@Valid @RequestBody BikeRequest request) {
         Bike bike = service.createBike(request.model());
         return ResponseEntity.created(URI.create("/bikes/" + bike.getId())).body(bike);
     }
 
     @PutMapping(path = "/{id}", consumes = APPLICATION_JSON_VALUE)
-    public Bike update(@PathVariable String id, @Valid @RequestBody BikeRequest request,
-                       HttpServletRequest http) {
-        RequestParameters.query(http);
-        return service.updateBike(RequestParameters.positiveId(id), request.model());
+    public Bike update(@PathVariable @Positive long id, @Valid @RequestBody BikeRequest request) {
+        return service.updateBike(id, request.model());
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable String id, HttpServletRequest http) {
-        RequestParameters.query(http);
-        service.deleteBike(RequestParameters.positiveId(id));
+    public void delete(@PathVariable @Positive long id) {
+        service.deleteBike(id);
     }
 
     public record BikeRequest(@NotBlank String model) {

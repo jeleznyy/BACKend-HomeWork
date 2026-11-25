@@ -1,5 +1,6 @@
 package app;
 
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
@@ -46,6 +48,8 @@ class ApiErrors extends ResponseEntityExceptionHandler {
             if (field != null) {
                 message = field.getField() + ": " + field.getDefaultMessage();
             }
+        } else if (error instanceof HandlerMethodValidationException || error instanceof TypeMismatchException) {
+            message = "Некорректные параметры запроса";
         } else if (error instanceof ResponseStatusException statusError && statusError.getReason() != null) {
             message = statusError.getReason();
         }

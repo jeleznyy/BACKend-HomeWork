@@ -223,3 +223,11 @@ curl -i http://localhost:8080/bikes/with-customers
 curl -i 'http://localhost:8080/bikes/with-customers?available=false'
 
 curl -i 'http://localhost:8080/bikes/with-customers?available=yes'
+
+curl -i 'http://localhost:8080/bikes?model='
+
+curl -i 'http://localhost:8080/bikes/8?extra=x'
+
+curl -i 'http://localhost:8080/bikes/with-customers?available=true&available=false'
+
+curl -i -X POST http://localhost:8080/customers/0/returns -H 'Content-Type: application/json' -d '{"bikeId":8}'

@@ -1,6 +1,5 @@
 package app;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,59 +32,48 @@ public class CustomerController {
     }
 
     @GetMapping
-    public List<Customer> list(HttpServletRequest http) {
-        var params = RequestParameters.query(http, "name", "type");
-        return service.getCustomers(params.get("name"), params.get("type"));
+    public List<Customer> list(@RequestParam(name = "name", required = false) String name,
+                               @RequestParam(name = "type", required = false) String type) {
+        return service.getCustomers(name, type);
     }
 
     @GetMapping("/{id}")
-    public Customer get(@PathVariable String id, HttpServletRequest http) {
-        RequestParameters.query(http);
-        return service.getCustomer(RequestParameters.positiveId(id));
+    public Customer get(@PathVariable @Positive long id) {
+        return service.getCustomer(id);
     }
 
     @PostMapping(consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity<Customer> create(@Valid @RequestBody CustomerRequest request,
-                                           HttpServletRequest http) {
-        RequestParameters.query(http);
+    public ResponseEntity<Customer> create(@Valid @RequestBody CustomerRequest request) {
         Customer customer = service.createCustomer(request.name(), request.type());
         return ResponseEntity.created(URI.create("/customers/" + customer.getId())).body(customer);
     }
 
     @PostMapping(path = "/with-rental", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<RentalService.RentalReceipt> createWithRental(
-            @Valid @RequestBody CustomerRentalRequest request, HttpServletRequest http) {
-        RequestParameters.query(http);
+            @Valid @RequestBody CustomerRentalRequest request) {
         var receipt = service.createCustomerWithRental(request.name(), request.type(), request.bikeId());
         return ResponseEntity.created(URI.create("/customers/" + receipt.customer().getId())).body(receipt);
     }
 
     @PutMapping(path = "/{id}", consumes = APPLICATION_JSON_VALUE)
-    public Customer update(@PathVariable String id, @Valid @RequestBody CustomerRequest request,
-                           HttpServletRequest http) {
-        RequestParameters.query(http);
-        return service.updateCustomer(RequestParameters.positiveId(id), request.name(), request.type());
+    public Customer update(@PathVariable @Positive long id, @Valid @RequestBody CustomerRequest request) {
+        return service.updateCustomer(id, request.name(), request.type());
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable String id, HttpServletRequest http) {
-        RequestParameters.query(http);
-        service.deleteCustomer(RequestParameters.positiveId(id));
+    public void delete(@PathVariable @Positive long id) {
+        service.deleteCustomer(id);
     }
 
     @PostMapping(path = "/{id}/rentals", consumes = APPLICATION_JSON_VALUE)
-    public Bike rent(@PathVariable String id, @Valid @RequestBody RentalRequest request,
-                     HttpServletRequest http) {
-        RequestParameters.query(http);
-        return service.rentBike(RequestParameters.positiveId(id), request.bikeId());
+    public Bike rent(@PathVariable @Positive long id, @Valid @RequestBody RentalRequest request) {
+        return service.rentBike(id, request.bikeId());
     }
 
     @PostMapping(path = "/{id}/returns", consumes = APPLICATION_JSON_VALUE)
-    public Bike returnBike(@PathVariable String id, @Valid @RequestBody RentalRequest request,
-                           HttpServletRequest http) {
-        RequestParameters.query(http);
-        return service.returnBike(RequestParameters.positiveId(id), request.bikeId());
+    public Bike returnBike(@PathVariable @Positive long id, @Valid @RequestBody RentalRequest request) {
+        return service.returnBike(id, request.bikeId());
     }
 
     public record CustomerRequest(@NotBlank String name, @NotBlank String type) {
