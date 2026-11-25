@@ -20,6 +20,28 @@ class RentalServiceTest {
     }
 
     @Test
+    void registersCustomerAndRentsBike() {
+        Bike bike = service.createBike("Stels");
+
+        var rental = service.createCustomerWithRental(" Anna ", "regular", bike.getId());
+
+        assertEquals("Anna", service.getCustomer(rental.customer().getId()).getName());
+        assertEquals(bike.getId(), rental.bike().getId());
+        assertEquals(Long.valueOf(rental.customer().getId()), service.getBike(bike.getId()).getCustomerId());
+    }
+
+    @Test
+    void invalidCustomerLeavesBikeAvailable() {
+        Bike bike = service.createBike("Stels");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.createCustomerWithRental("Anna", "vip", bike.getId()));
+
+        assertTrue(service.getCustomers().isEmpty());
+        assertTrue(service.getBike(bike.getId()).isAvailable());
+    }
+
+    @Test
     void rentalAndReturnChangeStoredState() {
         Bike bike = service.createBike("Stels");
         Customer customer = service.createCustomer("Oleg", "regular");

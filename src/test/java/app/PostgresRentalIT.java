@@ -7,14 +7,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import java.time.OffsetDateTime;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class PostgresRentalIT {
@@ -45,10 +48,36 @@ class PostgresRentalIT {
                 select c.name from bikes b join customers c on b.customer_id = c.id where b.id = ?
                 """, String.class, bikeId));
         assertThrows(IllegalStateException.class, () -> service.deleteCustomer(customerId));
+        OffsetDateTime rentedAt = rentedAt(bikeId);
+        assertNotNull(rentedAt);
+
+        service.updateBike(bikeId, "Trek");
+        assertEquals(rentedAt, rentedAt(bikeId));
 
         service.returnBike(customerId, bikeId);
 
         assertNull(jdbc.queryForObject("select customer_id from bikes where id = ?", Long.class, bikeId));
+        assertNull(rentedAt(bikeId));
+        service.deleteBike(bikeId);
+        service.deleteCustomer(customerId);
+    }
+
+    @Test
+    void occupiedBikeRollsBackNewCustomer() {
+        long bikeId = service.createBike("Stels").getId();
+        var rental = service.createCustomerWithRental("First rider", "regular", bikeId);
+        long customerId = rental.customer().getId();
+        OffsetDateTime rentedAt = rentedAt(bikeId);
+        assertEquals(Long.valueOf(customerId), service.getBike(bikeId).getCustomerId());
+        assertNotNull(rentedAt);
+
+        assertThrows(IllegalStateException.class,
+                () -> service.createCustomerWithRental("Rejected rider", "premium", bikeId));
+
+        assertTrue(service.getCustomers("Rejected rider", null).isEmpty());
+        assertEquals(Long.valueOf(customerId), service.getBike(bikeId).getCustomerId());
+        assertEquals(rentedAt, rentedAt(bikeId));
+        service.returnBike(customerId, bikeId);
         service.deleteBike(bikeId);
         service.deleteCustomer(customerId);
     }
@@ -85,5 +114,10 @@ class PostgresRentalIT {
         } catch (IllegalStateException rejected) {
             return false;
         }
+    }
+
+    private OffsetDateTime rentedAt(long bikeId) {
+        return jdbc.queryForObject("select rented_at from bikes where id = ?",
+                OffsetDateTime.class, bikeId);
     }
 }

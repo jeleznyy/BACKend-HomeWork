@@ -51,6 +51,14 @@ public class CustomerController {
         return ResponseEntity.created(URI.create("/customers/" + customer.getId())).body(customer);
     }
 
+    @PostMapping(path = "/with-rental", consumes = APPLICATION_JSON_VALUE)
+    public ResponseEntity<RentalService.RentalReceipt> createWithRental(
+            @Valid @RequestBody CustomerRentalRequest request, HttpServletRequest http) {
+        RequestParameters.query(http);
+        var receipt = service.createCustomerWithRental(request.name(), request.type(), request.bikeId());
+        return ResponseEntity.created(URI.create("/customers/" + receipt.customer().getId())).body(receipt);
+    }
+
     @PutMapping(path = "/{id}", consumes = APPLICATION_JSON_VALUE)
     public Customer update(@PathVariable String id, @Valid @RequestBody CustomerRequest request,
                            HttpServletRequest http) {
@@ -80,6 +88,10 @@ public class CustomerController {
     }
 
     public record CustomerRequest(@NotBlank String name, @NotBlank String type) {
+    }
+
+    public record CustomerRentalRequest(@NotBlank String name, @NotBlank String type,
+                                        @NotNull @Positive Long bikeId) {
     }
 
     public record RentalRequest(@NotNull @Positive Long bikeId) {

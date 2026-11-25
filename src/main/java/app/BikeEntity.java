@@ -10,6 +10,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "bikes")
 public class BikeEntity {
@@ -24,6 +26,9 @@ public class BikeEntity {
     @JoinColumn(name = "customer_id")
     private CustomerEntity customer;
 
+    @Column(name = "rented_at")
+    private Instant rentedAt;
+
     protected BikeEntity() {
     }
 
@@ -32,6 +37,11 @@ public class BikeEntity {
     }
 
     void update(String model, CustomerEntity customer) {
+        if (customer == null) {
+            rentedAt = null;
+        } else if (this.customer == null) {
+            rentedAt = Instant.now();
+        }
         this.model = model;
         this.customer = customer;
     }

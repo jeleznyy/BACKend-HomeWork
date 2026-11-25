@@ -6,7 +6,9 @@
 
 HTTP-сервис проката велосипедов. Java 21, Maven, Spring Boot, PostgreSQL 18.
 
-Данные проката хранятся в PostgreSQL. Flyway создаёт таблицы при запуске.
+Данные проката хранятся в PostgreSQL. Flyway создаёт и обновляет таблицы.
+
+`POST /customers/with-rental` создаёт клиента и сразу выдаёт ему велосипед. При ошибке клиент не сохраняется.
 
 Запуск базы в Docker — `docker compose up -d --wait db`
 
@@ -16,4 +18,4 @@ HTTP-сервис проката велосипедов. Java 21, Maven, Spring 
 
 Запуск тестов — `mvn test`
 
-Тесты с PostgreSQL — `mvn -Dtest=PostgresRentalIT test`. В `TEST_DB_URL` 
+Тесты с PostgreSQL — `mvn -Dtest=PostgresRentalIT test` с адресом тестовой базы в `TEST_DB_URL`.

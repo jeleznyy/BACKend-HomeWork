@@ -64,6 +64,16 @@ public class RentalService {
         return repository.createCustomer(checkText(name, "name"), checkType(type));
     }
 
+    @Transactional
+    public RentalReceipt createCustomerWithRental(String name, String type, long bikeId) {
+        Customer customer = createCustomer(name, type);
+        Bike bike = rentBike(customer.getId(), bikeId);
+        return new RentalReceipt(customer, bike);
+    }
+
+    public record RentalReceipt(Customer customer, Bike bike) {
+    }
+
     public Customer getCustomer(long id) {
         return requireCustomer(repository.findCustomer(id));
     }
