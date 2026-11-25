@@ -36,6 +36,11 @@ class JpaRentalRepository implements RentalRepository {
     }
 
     @Override
+    public List<BikeWithCustomer> findAllBikesWithCustomers() {
+        return bikes.findAllWithCustomers().stream().map(BikeEntity::toBikeWithCustomer).toList();
+    }
+
+    @Override
     public void saveBike(Bike bike) {
         BikeEntity entity = bikes.findById(bike.getId()).orElseThrow();
         Long customerId = bike.getCustomerId();

@@ -3,6 +3,7 @@ package app;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,6 +39,13 @@ public class BikeController {
             throw new IllegalArgumentException("available должен быть true или false");
         }
         return service.getBikes(params.get("model"), available == null ? null : Boolean.valueOf(available));
+    }
+
+    @GetMapping("/with-customers")
+    public List<BikeWithCustomer> listWithCustomers(
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) @Pattern(regexp = "true|false") String available) {
+        return service.getBikesWithCustomers(model, available == null ? null : Boolean.valueOf(available));
     }
 
     @GetMapping("/{id}")

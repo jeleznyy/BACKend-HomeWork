@@ -1,5 +1,7 @@
 package app;
 
+import jakarta.persistence.EntityManagerFactory;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -8,6 +10,8 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -19,13 +23,17 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
+        properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 class PostgresRentalIT {
     @Autowired
     private RentalService service;
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     @DynamicPropertySource
     static void testDatabase(DynamicPropertyRegistry properties) {
@@ -34,6 +42,47 @@ class PostgresRentalIT {
             throw new IllegalStateException("Укажи TEST_DB_URL для отдельной базы тестов");
         }
         properties.add("spring.datasource.url", () -> url);
+    }
+
+    @Test
+    void bikeListLoadsFortyCustomersInOneQuery() {
+        String model = "Test list " + UUID.randomUUID();
+        Bike free = service.createBike(model);
+        var statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        long before = statistics.getPrepareStatementCount();
+
+        var smallList = service.getBikesWithCustomers(model, null);
+
+        assertEquals(1L, statistics.getPrepareStatementCount() - before);
+        assertEquals(1, smallList.size());
+
+        var rentals = new ArrayList<RentalService.RentalReceipt>();
+        for (int i = 0; i < 40; i++) {
+            Bike bike = service.createBike(model);
+            rentals.add(service.createCustomerWithRental("Rider " + i, "regular", bike.getId()));
+        }
+        before = statistics.getPrepareStatementCount();
+
+        var bikes = service.getBikesWithCustomers(model, null);
+
+        assertEquals(1L, statistics.getPrepareStatementCount() - before);
+        assertEquals(41, bikes.size());
+        assertEquals(free.getId(), bikes.getFirst().id());
+        assertNull(bikes.getFirst().customer());
+        assertNull(bikes.getFirst().rentedAt());
+        for (int i = 0; i < rentals.size(); i++) {
+            var rental = rentals.get(i);
+            var item = bikes.get(i + 1);
+            assertEquals(rental.bike().getId(), item.id());
+            assertEquals(rental.customer().getId(), item.customer().getId());
+            assertEquals("Rider " + i, item.customer().getName());
+            assertNotNull(item.rentedAt());
+
+            service.returnBike(rental.customer().getId(), rental.bike().getId());
+            service.deleteBike(rental.bike().getId());
+            service.deleteCustomer(rental.customer().getId());
+        }
+        service.deleteBike(free.getId());
     }
 
     @Test

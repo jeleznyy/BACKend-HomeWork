@@ -20,6 +20,25 @@ class BikeServiceTest {
     }
 
     @Test
+    void filtersBikesWithCustomersByModelAndAvailability() {
+        Bike rented = service.createBike("Stels Pilot");
+        Bike free = service.createBike("Stels Navigator");
+        service.createBike("Trek");
+        Customer customer = service.createCustomer("Anna", "regular");
+        service.rentBike(customer.getId(), rented.getId());
+
+        var rentedBikes = service.getBikesWithCustomers("Stels", false);
+        var freeBikes = service.getBikesWithCustomers("Stels", true);
+
+        assertEquals(1, rentedBikes.size());
+        assertEquals(rented.getId(), rentedBikes.getFirst().id());
+        assertEquals(customer.getId(), rentedBikes.getFirst().customer().getId());
+        assertEquals(1, freeBikes.size());
+        assertEquals(free.getId(), freeBikes.getFirst().id());
+        assertNull(freeBikes.getFirst().customer());
+    }
+
+    @Test
     void newServiceHasNoResources() {
         assertTrue(service.getBikes().isEmpty());
         assertTrue(service.getCustomers().isEmpty());

@@ -10,6 +10,8 @@ HTTP-сервис проката велосипедов. Java 21, Maven, Spring 
 
 `POST /customers/with-rental` создаёт клиента и сразу выдаёт ему велосипед. При ошибке клиент не сохраняется.
 
+`GET /bikes/with-customers` показывает велосипеды, клиентов и время выдачи.
+
 Запуск базы в Docker — `docker compose up -d --wait db`
 
 Запуск — `mvn spring-boot:run`

@@ -7,6 +7,7 @@ interface RentalRepository {
     Bike findBike(long id);
     Bike findBikeForUpdate(long id);
     List<Bike> findAllBikes();
+    List<BikeWithCustomer> findAllBikesWithCustomers();
     void saveBike(Bike bike);
     void deleteBike(long id);
 

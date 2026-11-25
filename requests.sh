@@ -217,3 +217,9 @@ curl -i -X POST http://localhost:8080/customers/with-rental -H 'Content-Type: ap
 curl -i -X POST http://localhost:8080/customers/with-rental -H 'Content-Type: application/json' -d '{"name":"Pavel","type":"regular","bikeId":8}'
 
 curl -i 'http://localhost:8080/customers?name=Pavel'
+
+curl -i http://localhost:8080/bikes/with-customers
+
+curl -i 'http://localhost:8080/bikes/with-customers?available=false'
+
+curl -i 'http://localhost:8080/bikes/with-customers?available=yes'

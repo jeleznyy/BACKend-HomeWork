@@ -49,4 +49,9 @@ public class BikeEntity {
     Bike toBike() {
         return new Bike(id, model, customer == null ? null : customer.getId());
     }
+
+    BikeWithCustomer toBikeWithCustomer() {
+        return new BikeWithCustomer(id, model, customer == null, rentedAt,
+                customer == null ? null : customer.toCustomer());
+    }
 }

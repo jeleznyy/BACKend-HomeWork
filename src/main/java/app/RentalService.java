@@ -31,15 +31,17 @@ public class RentalService {
     public List<Bike> getBikes(String model, Boolean available) {
         List<Bike> result = new ArrayList<>();
         for (Bike bike : repository.findAllBikes()) {
-            if (model != null && !bike.getModel().contains(model)) {
-                continue;
+            if (matchesBike(bike.getModel(), bike.isAvailable(), model, available)) {
+                result.add(bike);
             }
-            if (available != null && bike.isAvailable() != available) {
-                continue;
-            }
-            result.add(bike);
         }
         return result;
+    }
+
+    public List<BikeWithCustomer> getBikesWithCustomers(String model, Boolean available) {
+        return repository.findAllBikesWithCustomers().stream()
+                .filter(bike -> matchesBike(bike.model(), bike.available(), model, available))
+                .toList();
     }
 
     @Transactional
@@ -147,6 +149,11 @@ public class RentalService {
         Bike returned = bike.returnToShop();
         repository.saveBike(returned);
         return returned;
+    }
+
+    private boolean matchesBike(String bikeModel, boolean bikeAvailable, String model, Boolean available) {
+        return (model == null || bikeModel.contains(model))
+                && (available == null || bikeAvailable == available);
     }
 
     private Bike requireBike(Bike bike) {

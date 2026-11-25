@@ -34,6 +34,16 @@ class InMemoryRentalRepository implements RentalRepository {
     }
 
     @Override
+    public List<BikeWithCustomer> findAllBikesWithCustomers() {
+        List<BikeWithCustomer> result = new ArrayList<>();
+        for (Bike bike : bikes.values()) {
+            Customer customer = customers.get(bike.getCustomerId());
+            result.add(new BikeWithCustomer(bike.getId(), bike.getModel(), bike.isAvailable(), null, customer));
+        }
+        return result;
+    }
+
+    @Override
     public void saveBike(Bike bike) {
         bikes.put(bike.getId(), bike);
     }
